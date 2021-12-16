@@ -10,35 +10,38 @@ import java.util.concurrent.Executors;
 public class Main {
 
     public static void main(String[] args) throws InterruptedException {
-        // Generate el metrics
-        int[][] matrix1 = matrixGeneration(20, 20);
-        int[][] matrix2 = matrixGeneration(20, 20);
+        // Generate el metrics row2 * col1  output -> row1 * col2
+        int[][] matrix1 = matrixGeneration(15, 3);
+        int[][] matrix2 = matrixGeneration(3, 5);
         printMatrix(matrix1);
         System.out.println("=======================================");
         printMatrix(matrix2);
 
         System.out.println("============Mul=================");
-       /*int[][] mulResult = mul(matrix1, matrix2);
-       // printMatrix(mulResult);*/
-
+       int[][] mulResult1 = mul(matrix1, matrix2);
+        printMatrix(mulResult1);
 
         System.out.println("============Mul Using Threads=================");
-        int[][] mulResult = mulUsingThreadsFixedNumberOfThreads(matrix1, matrix2);
-        printMatrix(mulResult);
+        int[][] mulResult2 = mulUsingThreads(matrix1, matrix2);
+        printMatrix(mulResult2);
+
+        System.out.println("============Mul Using Threads with fixed size =================");
+        int[][] mulResult3 = mulUsingThreadsFixedNumberOfThreads(matrix1, matrix2);
+        printMatrix(mulResult3);
     }
 
     private static int[][] mul(int[][] matrix1, int[][] matrix2) {
-        int numOfRows = matrix1.length;
-        int numOfCols = matrix2[0].length;
-        int[][] result = new int[numOfRows][numOfCols];
+        int row1 = matrix1.length;
+        int col2 = matrix2[0].length;
 
-        int columns2 = matrix2[0].length;
+        int[][] result = new int[row1][col2];
 
-        for (int i = 0; i < numOfRows; i++) {
-            for (int j = 0; j < columns2; j++) {
-                for (int k = 0; k < numOfCols; k++) {
+        int row2 = matrix2.length;
+
+        for (int i = 0; i < row1; i++) {
+            for (int j = 0; j < col2; j++) {
+                for ( int k = 0; k < row2; k++)
                     result[i][j] += matrix1[i][k] * matrix2[k][j];
-                }
             }
         }
 
@@ -51,6 +54,7 @@ public class Main {
         int[][] result = new int[numOfRows][numOfCols];
         List<Object> threads = new ArrayList<>();
 
+
         for (int i = 0; i < numOfRows; i++) {
             SingleThread singleThread = new SingleThread(result, matrix1, matrix2, i);
             printMatrix(result);
@@ -59,8 +63,8 @@ public class Main {
 
             threads.add(thread);
 
-            if(threads.size()%10==0){
-              release(threads);
+            if (threads.size() % 10 == 0) {
+                release(threads);
             }
         }
 
@@ -72,17 +76,18 @@ public class Main {
         ExecutorService executor = Executors.newFixedThreadPool(10);
         int numOfRows = matrix1.length;
         int numOfCols = matrix2[0].length;
-        CountDownLatch latch = new CountDownLatch(10);
+        CountDownLatch latch = new CountDownLatch(numOfRows);
 
         int[][] result = new int[numOfRows][numOfCols];
 
         for (int i = 0; i < numOfRows; i++) {
-            SingleThread singleThread = new SingleThread(result, matrix1, matrix2, i,latch);
+            SingleThread singleThread = new SingleThread(result, matrix1, matrix2, i, latch);
             printMatrix(result);
             Thread thread = new Thread(singleThread);
-            //thread.start();
-               executor.submit(thread);
+            executor.submit(thread);
+
         }
+
 
         latch.await();
 
@@ -92,7 +97,7 @@ public class Main {
         return result;
     }
 
-    private static void release(List threads){
+    private static void release(List threads) {
         for (Object thread : threads) {
             try {
                 System.out.println(((Thread) thread).getName());
