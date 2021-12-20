@@ -3,16 +3,15 @@ package com.company;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.Set;
+import java.util.concurrent.*;
 
 public class Main {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws Exception {
         // Generate el metrics row2 * col1  output -> row1 * col2
         int[][] matrix1 = matrixGeneration(15, 3);
-        int[][] matrix2 = matrixGeneration(3, 5);
+        int[][] matrix2 = matrixGeneration(3, 3);
         printMatrix(matrix1);
         System.out.println("=======================================");
         printMatrix(matrix2);
@@ -26,8 +25,9 @@ public class Main {
         printMatrix(mulResult2);
 
         System.out.println("============Mul Using Threads with fixed size =================");
-        int[][] mulResult3 = mulUsingThreadsFixedNumberOfThreads(matrix1, matrix2);
+        int[][] mulResult3 = mulUsingThreadsFixedNumberOfThreads(matrix1, matrix2,3);
         printMatrix(mulResult3);
+
     }
 
     private static int[][] mul(int[][] matrix1, int[][] matrix2) {
@@ -72,7 +72,7 @@ public class Main {
     }
 
 
-    private static int[][] mulUsingThreadsFixedNumberOfThreads(int[][] matrix1, int[][] matrix2) throws InterruptedException {
+    /*private static int[][] mulUsingThreadsFixedNumberOfThreads(int[][] matrix1, int[][] matrix2) throws InterruptedException {
         ExecutorService executor = Executors.newFixedThreadPool(10);
         int numOfRows = matrix1.length;
         int numOfCols = matrix2[0].length;
@@ -85,7 +85,6 @@ public class Main {
             printMatrix(result);
             Thread thread = new Thread(singleThread);
             executor.submit(thread);
-
         }
 
 
@@ -95,12 +94,41 @@ public class Main {
 
 
         return result;
+    }*/
+
+
+    private static int[][] mulUsingThreadsFixedNumberOfThreads(int[][] matrix1, int[][] matrix2, int threadNum) throws Exception {
+        List<Thread>threadList = new ArrayList<>();
+        int numOfRows = matrix1.length;
+        int numOfCols = matrix2[0].length;
+        int[][] result = new int[numOfRows][numOfCols];
+
+        for (int i = 0; i < numOfRows; i++) {
+
+            SingleThread singleThread = new SingleThread(result, matrix1, matrix2, i);
+            printMatrix(result);
+            Thread thread = new Thread(singleThread);
+            thread.start();
+
+            threadList.add(thread);
+
+            System.out.println(Thread.activeCount());
+
+            if (threadList.size() % threadNum == 0) {
+                release(threadList);
+            }
+        }
+        return result;
     }
 
     private static void release(List threads) {
+        Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
+        for(Thread t :threadSet)
+            System.out.printf("%-15s \t %-15s \t %-15d \t %s\n", t.getName(), t.getState(), t.getPriority(), t.isDaemon());
+
         for (Object thread : threads) {
             try {
-                System.out.println(((Thread) thread).getName());
+
                 ((Thread) thread).join();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -133,4 +161,7 @@ public class Main {
 
         return output;
     }
+
+
+
 }
